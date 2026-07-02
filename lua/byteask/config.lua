@@ -38,7 +38,7 @@ M.defaults = {
 
   -- Keymaps. Set a value to nil to disable that mapping.
   keymaps = {
-    toggle = nil,   -- global normal-mode map to toggle (e.g. '<leader>bb'); nil = none
+    toggle = nil, -- global normal-mode map to toggle (e.g. '<leader>bb'); nil = none
     quit = '<C-q>', -- inside the ByteAsk window: close it (keeps job alive)
   },
 

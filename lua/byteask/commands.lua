@@ -74,7 +74,9 @@ function M.apply(on_done)
         else
           vim.notify('ByteAsk apply failed (code ' .. tostring(code) .. ').', vim.log.levels.ERROR)
         end
-        if on_done then on_done(ok) end
+        if on_done then
+          on_done(ok)
+        end
       end)
     end,
   })
@@ -95,13 +97,19 @@ local function run_headless(argv, opts)
   append({ '$ ' .. table.concat(argv, ' '), '' })
 
   local function on_data(_, data)
-    if not data then return end
+    if not data then
+      return
+    end
     local chunk = {}
     for _, line in ipairs(data) do
-      if line ~= '' then chunk[#chunk + 1] = line end
+      if line ~= '' then
+        chunk[#chunk + 1] = line
+      end
     end
     if #chunk > 0 then
-      vim.schedule(function() append(chunk) end)
+      vim.schedule(function()
+        append(chunk)
+      end)
     end
   end
 

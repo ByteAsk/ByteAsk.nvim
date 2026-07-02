@@ -14,15 +14,33 @@ local state = require('byteask.state')
 local M = {}
 
 -- ── Public API (stable surface for keymaps / lua callers) ──────────────────
-M.open = function(prompt) terminal.open(prompt) end
-M.close = function() terminal.close() end
-M.toggle = function() terminal.toggle() end
-M.exec = function(prompt, ctx) commands.exec(prompt, ctx) end
-M.review = function() commands.review() end
-M.apply = function() commands.apply() end
-M.fix_diagnostics = function() commands.fix_diagnostics() end
-M.resume = function(last) commands.resume(last) end
-M.fork = function(last) commands.fork(last) end
+M.open = function(prompt)
+  terminal.open(prompt)
+end
+M.close = function()
+  terminal.close()
+end
+M.toggle = function()
+  terminal.toggle()
+end
+M.exec = function(prompt, ctx)
+  commands.exec(prompt, ctx)
+end
+M.review = function()
+  commands.review()
+end
+M.apply = function()
+  commands.apply()
+end
+M.fix_diagnostics = function()
+  commands.fix_diagnostics()
+end
+M.resume = function(last)
+  commands.resume(last)
+end
+M.fork = function(last)
+  commands.fork(last)
+end
 
 -- ── Statusline helper (lualine-friendly) ───────────────────────────────────
 function M.statusline()
@@ -36,8 +54,12 @@ end
 
 function M.status()
   return {
-    function() return M.statusline() end,
-    cond = function() return M.statusline() ~= '' end,
+    function()
+      return M.statusline()
+    end,
+    cond = function()
+      return M.statusline() ~= ''
+    end,
     icon = '',
     color = { fg = '#86AEA5' }, -- ByteAsk brand green
   }
@@ -58,7 +80,9 @@ function M._register_commands()
     end
   end, { nargs = '*', desc = 'Toggle ByteAsk, or open seeded with a prompt' })
 
-  cmd('ByteAskToggle', function() terminal.toggle() end, { desc = 'Toggle the ByteAsk window' })
+  cmd('ByteAskToggle', function()
+    terminal.toggle()
+  end, { desc = 'Toggle the ByteAsk window' })
 
   -- Headless exec. Range-aware: with a visual selection, the selection is sent
   -- as context and the args are the instruction.
@@ -70,10 +94,15 @@ function M._register_commands()
     end
   end, { nargs = '*', range = true, desc = 'Run byteask exec (headless); range = send selection as context' })
 
-  cmd('ByteAskReview', function() commands.review() end, { desc = 'Run byteask review on the repository' })
-  cmd('ByteAskApply', function() commands.apply() end, { desc = 'Apply the latest ByteAsk diff to the working tree' })
-  cmd('ByteAskFixDiagnostics', function() commands.fix_diagnostics() end,
-    { desc = 'Ask ByteAsk to fix the current buffer diagnostics' })
+  cmd('ByteAskReview', function()
+    commands.review()
+  end, { desc = 'Run byteask review on the repository' })
+  cmd('ByteAskApply', function()
+    commands.apply()
+  end, { desc = 'Apply the latest ByteAsk diff to the working tree' })
+  cmd('ByteAskFixDiagnostics', function()
+    commands.fix_diagnostics()
+  end, { desc = 'Ask ByteAsk to fix the current buffer diagnostics' })
 
   cmd('ByteAskResume', function(a)
     commands.resume(a.bang) -- :ByteAskResume! resumes the most recent; bare opens picker
@@ -87,8 +116,9 @@ end
 local function register_keymaps()
   local km = config.options.keymaps or {}
   if km.toggle then
-    vim.keymap.set('n', km.toggle, function() terminal.toggle() end,
-      { noremap = true, silent = true, desc = 'Toggle ByteAsk' })
+    vim.keymap.set('n', km.toggle, function()
+      terminal.toggle()
+    end, { noremap = true, silent = true, desc = 'Toggle ByteAsk' })
   end
 end
 

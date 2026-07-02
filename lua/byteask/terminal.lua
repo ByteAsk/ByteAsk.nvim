@@ -35,12 +35,16 @@ local function ensure_buffer()
   if quit then
     -- From terminal mode: drop to normal first, then close.
     vim.api.nvim_buf_set_keymap(
-      buf, 't', quit,
+      buf,
+      't',
+      quit,
       [[<C-\><C-n><cmd>lua require('byteask').close()<CR>]],
       { noremap = true, silent = true }
     )
     vim.api.nvim_buf_set_keymap(
-      buf, 'n', quit,
+      buf,
+      'n',
+      quit,
       [[<cmd>lua require('byteask').close()<CR>]],
       { noremap = true, silent = true }
     )
