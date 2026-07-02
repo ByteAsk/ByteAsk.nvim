@@ -127,6 +127,12 @@ require('lualine').setup({
   scraping — inline diffs, approvals, and streaming tool calls rendered natively.
 - Consume `byteask exec --json` (JSONL events) for a real progress/tool-call UI.
 
+## For coding agents
+
+See **[`AGENTS.md`](./AGENTS.md)** — the release process (tag → verify),
+required secrets and where to get them, and a CI gotcha worth reading before
+touching `.github/workflows/`.
+
 ## License
 
 Apache-2.0
