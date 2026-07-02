@@ -1,0 +1,8 @@
+# Neovim / Lua
+*.log
+tags
+.luarc.json
+
+# Test artifacts
+/tests/.deps/
+luacov.*.out
