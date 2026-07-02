@@ -25,10 +25,12 @@ jobs:
   luarocks:
     runs-on: ubuntu-latest
     needs: github-release
+    env:
+      # `secrets.*` cannot be read directly in `if:` conditions — route it
+      # through `env` first so the step can gate on it.
+      LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Publish to luarocks.org
-        if: ${{ secrets.LUAROCKS_API_KEY != '' }}
+        if: ${{ env.LUAROCKS_API_KEY != '' }}
         uses: nvim-neorocks/luarocks-tag-release@v7
-        env:
-          LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
