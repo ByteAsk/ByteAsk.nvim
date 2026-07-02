@@ -45,7 +45,10 @@ function M.guide()
           if code == 0 and util.is_installed() then
             vim.notify('ByteAsk installed. Run :ByteAsk to start.', vim.log.levels.INFO)
           else
-            vim.notify('ByteAsk install failed (code ' .. tostring(code) .. '). Install manually.', vim.log.levels.ERROR)
+            vim.notify(
+              'ByteAsk install failed (code ' .. tostring(code) .. '). Install manually.',
+              vim.log.levels.ERROR
+            )
           end
         end)
       end,
