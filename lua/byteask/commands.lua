@@ -260,17 +260,33 @@ function M.sessions()
         if not id or id == '' then
           return
         end
+        -- No common flags: archive/unarchive/delete only take a session id,
+        -- same precedent as M.apply ("No common flags: apply only performs a
+        -- git-apply and rejects model/-c flags") — so this builds off
+        -- base_cmd(), not build_subcommand().
         local argv = util.base_cmd()
         argv[#argv + 1] = subcommand
         argv[#argv + 1] = id
+        local stderr_lines = {}
         vim.fn.jobstart(argv, {
           cwd = vim.loop.cwd(),
+          on_stderr = function(_, data)
+            for _, line in ipairs(data or {}) do
+              if line ~= '' then
+                stderr_lines[#stderr_lines + 1] = line
+              end
+            end
+          end,
           on_exit = function(_, code)
             vim.schedule(function()
               if code == 0 then
                 vim.notify('ByteAsk: ' .. subcommand .. 'd session ' .. id .. '.', vim.log.levels.INFO)
               else
-                vim.notify('ByteAsk ' .. subcommand .. ' failed (code ' .. code .. ').', vim.log.levels.ERROR)
+                local detail = #stderr_lines > 0 and (': ' .. table.concat(stderr_lines, ' ')) or ''
+                vim.notify(
+                  'ByteAsk ' .. subcommand .. ' failed (code ' .. code .. ')' .. detail .. '.',
+                  vim.log.levels.ERROR
+                )
               end
             end)
           end,
@@ -299,13 +315,27 @@ function M.model(clear)
     default = current_model,
   }, function(model)
     if model == nil then
-      return -- cancelled
+      return -- cancelled: leave the override untouched
     end
+
+    -- Commit the model right away so cancelling the (optional) -c prompt
+    -- below can't silently discard it; the existing config override carries
+    -- over unless the next prompt explicitly replaces it.
+    config.set_override({ model = model ~= '' and model or nil, config = config.override.config })
+
+    local current_cfg = {}
+    for key, value in pairs(config.override.config or {}) do
+      current_cfg[#current_cfg + 1] = string.format('%s=%s', key, tostring(value))
+    end
+    table.sort(current_cfg)
+
     vim.ui.input({
       prompt = 'ByteAsk -c overrides, comma-separated key=value (blank = none): ',
+      default = table.concat(current_cfg, ','),
     }, function(cfg_str)
       if cfg_str == nil then
-        return -- cancelled
+        vim.notify('ByteAsk: model override set; config overrides left unchanged.', vim.log.levels.INFO)
+        return -- cancelled: keep the config override as it was
       end
       local cfg = {}
       if cfg_str ~= '' then
@@ -313,10 +343,17 @@ function M.model(clear)
           local key, value = pair:match('^%s*([%w_%.%-]+)%s*=%s*(.-)%s*$')
           if key and value then
             cfg[key] = value
+          else
+            vim.notify(
+              "ByteAsk: ignoring malformed -c entry '" .. pair .. "' (expected key=value).",
+              vim.log.levels.WARN
+            )
           end
         end
       end
-      config.set_override({ model = model ~= '' and model or nil, config = cfg })
+      -- Replaces the config override wholesale (blank clears it entirely) —
+      -- see config.set_override's docstring for why this can't be a merge.
+      config.set_override({ model = config.override.model, config = cfg })
       vim.notify('ByteAsk: model/config override set (use :ByteAskModel! to clear).', vim.log.levels.INFO)
     end)
   end)

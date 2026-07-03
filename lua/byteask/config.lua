@@ -71,18 +71,23 @@ end
 -- Transient model/-c override, set via :ByteAskModel and consulted by
 -- util.apply_common_flags on top of M.options. Session-lifetime, not
 -- persisted; cleared with :ByteAskModel!.
-M.override = { model = nil, config = nil }
+M.override = { model = nil, config = {} }
 
---- Merge fields into the active override (nil model/config leaves that field
---- as-is; pass an explicit {} for config to clear just the config overrides).
+--- Replace the active override wholesale — NOT a merge. `model = nil` means
+--- "no model override" and `config = {}`/nil means "no config overrides":
+--- each :ByteAskModel invocation fully restates the desired override, so a
+--- blank field genuinely clears it. (A deep-merge here would make a blank
+--- field unable to ever clear a previously-set value, since a nil table
+--- field is simply absent from the table rather than an explicit unset.)
 ---@param o table { model = string|nil, config = table|nil }
 function M.set_override(o)
-  M.override = vim.tbl_deep_extend('force', M.override, o or {})
+  o = o or {}
+  M.override = { model = o.model, config = o.config or {} }
 end
 
 --- Clear the transient override, falling back to M.options again.
 function M.clear_override()
-  M.override = { model = nil, config = nil }
+  M.override = { model = nil, config = {} }
 end
 
 return M
