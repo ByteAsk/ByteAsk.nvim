@@ -4,6 +4,13 @@ Neovim integration for **[ByteAsk](https://byteask.ai)** — the Codex-style age
 coding harness specialized for **C/C++** (compiler, disassembler, and debugger as
 first-class agent tools).
 
+> ### 💬 Join the community
+> **[discord.gg/vx5Eu4YNzG](https://discord.gg/vx5Eu4YNzG)** — community support, direct
+> access to the team, and the fastest way to report an issue. Direct email:
+> **anirudha@byteask.ai**.
+
+[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/vx5Eu4YNzG)
+
 This plugin drives the `byteask` CLI from inside Neovim:
 
 - **Interactive TUI** in a floating window, side panel, or tab.
