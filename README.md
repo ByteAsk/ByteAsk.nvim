@@ -11,7 +11,12 @@ This plugin drives the `byteask` CLI from inside Neovim:
   scratch buffer and can apply the produced diff straight to your working tree.
 - **Context sends** — pipe the current selection, file, or LSP diagnostics into a
   one-shot `exec` (e.g. "fix these compiler errors").
-- **Session control** — resume/fork previous sessions.
+- **Scoped review** — uncommitted changes, a base branch, a specific commit, or the
+  whole repo, matching what `byteask review` actually supports.
+- **AGENTS.md steering** — jump straight to (or scaffold) the file ByteAsk reads for
+  repo-local instructions.
+- **Full session lifecycle** — resume/fork, plus archive/unarchive/delete.
+- **Per-invocation model/config overrides** without editing your Lua config.
 - `:checkhealth byteask` and a lualine statusline component.
 
 > Inspired by [`codex.nvim`](https://github.com/johnseth97/codex.nvim), rebuilt for
@@ -40,7 +45,10 @@ This plugin drives the `byteask` CLI from inside Neovim:
     { '<leader>bx', ':ByteAskExec ', mode = 'n', desc = 'ByteAsk exec' },
     { '<leader>bx', ":'<,'>ByteAskExec ", mode = 'v', desc = 'ByteAsk exec (selection)' },
     { '<leader>bd', function() require('byteask').fix_diagnostics() end, desc = 'ByteAsk: fix diagnostics' },
-    { '<leader>br', function() require('byteask').review() end, desc = 'ByteAsk review' },
+    { '<leader>br', function() require('byteask').review() end, desc = 'ByteAsk review (scoped)' },
+    { '<leader>ba', function() require('byteask').agents() end, desc = 'ByteAsk: open/create AGENTS.md' },
+    { '<leader>bs', function() require('byteask').sessions() end, desc = 'ByteAsk: sessions (archive/unarchive/delete)' },
+    { '<leader>bm', function() require('byteask').model() end, desc = 'ByteAsk: set model/config override' },
   },
   opts = {
     layout = 'float',       -- 'float' | 'panel' | 'tab'
@@ -69,10 +77,13 @@ use {
 | `:ByteAskToggle` | Toggle the ByteAsk window (session survives when hidden) |
 | `:ByteAskExec {instr}` | Headless `exec`. In visual mode, sends the selection as context |
 | `:ByteAskFixDiagnostics` | Send current-buffer LSP/compiler diagnostics to `exec` for a fix |
-| `:ByteAskReview` | Run `byteask review` on the repository |
+| `:ByteAskReview` | Run `byteask review`, scoped via a prompt: uncommitted / base branch / commit / whole repo |
 | `:ByteAskApply` | Apply the latest agent diff to the working tree (`byteask apply`) |
 | `:ByteAskResume[!]` | Resume a session (picker; `!` = most recent) |
 | `:ByteAskFork[!]` | Fork a session (picker; `!` = most recent) |
+| `:ByteAskAgents` | Open the nearest `AGENTS.md` (walks up from the current file), or offer to create one |
+| `:ByteAskSessions` | Browse all sessions, or archive/unarchive/delete one by id or name |
+| `:ByteAskModel[!]` | Set a model / `-c` override for future invocations (`!` clears it) |
 
 Inside the ByteAsk window, `<C-q>` hides it (the session keeps running in the
 background — reopen with `:ByteAsk`).
@@ -120,6 +131,13 @@ require('lualine').setup({
   `jobstart`, streaming stdout/stderr into the `byteask://output` scratch buffer.
 - `resume`/`fork` re-launch the TUI with the corresponding subcommand (model/config
   overrides are omitted so the restored session keeps its own recorded settings).
+- `:ByteAskAgents` never spawns `byteask` — it just opens/creates the file on disk;
+  ByteAsk picks it up itself on the next turn.
+- `:ByteAskSessions`'s "browse all" delegates to `byteask resume --all`'s own picker;
+  archive/unarchive/delete shell the matching subcommand directly.
+- `:ByteAskModel` stores a transient override (session-lifetime, not persisted to
+  disk) that `apply_common_flags` layers on top of your static `setup()` config for
+  every subsequent invocation, until cleared with `:ByteAskModel!`.
 
 ## Roadmap
 

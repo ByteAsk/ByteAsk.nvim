@@ -35,9 +35,10 @@ byteask doctor   # health check
 ```
 
 Commands: `:ByteAsk [prompt]`, `:ByteAskExec {instr}` (range-aware — visual
-selection becomes context), `:ByteAskReview`, `:ByteAskApply`,
-`:ByteAskFixDiagnostics`, `:ByteAskResume[!]`, `:ByteAskFork[!]`. Full list and
-config options in `README.md`.
+selection becomes context), `:ByteAskReview` (scoped: uncommitted/base/commit/
+repo), `:ByteAskApply`, `:ByteAskFixDiagnostics`, `:ByteAskResume[!]`,
+`:ByteAskFork[!]`, `:ByteAskAgents`, `:ByteAskSessions`, `:ByteAskModel[!]`.
+Full list and config options in `README.md`.
 
 ## If you're cutting a release
 
@@ -67,7 +68,7 @@ gh release view vX.Y.Z --repo ByteAsk/ByteAsk.nvim
 
 `.github/workflows/ci.yml` runs three jobs: `stylua --check .` (formatting),
 `luacheck lua/ plugin/ --globals vim` (lint), and a headless Neovim load-test
-that asserts all 8 `:ByteAsk*` commands register. Run these locally before
+that asserts all 11 `:ByteAsk*` commands register. Run these locally before
 pushing to avoid a red CI:
 
 ```bash
@@ -75,7 +76,7 @@ stylua .                                    # auto-fix formatting
 luacheck lua/ plugin/ --globals vim         # lint (brew install luarocks; luarocks install luacheck)
 nvim --headless --clean --cmd "set rtp+=$(pwd)" \
   -c "lua require('byteask').setup({})" \
-  -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
+  -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics','ByteAskAgents','ByteAskSessions','ByteAskModel'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
   -c "qa!"
 ```
 
