@@ -36,15 +36,23 @@ function M.is_installed()
 end
 
 --- Append the shared flags (model, -c overrides, extra args) to an argv list.
+--- The transient override set via :ByteAskModel (config.override) wins over
+--- the static M.options defaults: its model replaces opts.model when set,
+--- and its config keys are layered on top of opts.config.
 ---@param argv string[]
 ---@return string[] argv (mutated + returned)
 function M.apply_common_flags(argv)
   local opts = config.options
-  if opts.model and opts.model ~= '' then
+  local override = config.override or {}
+
+  local model = override.model or opts.model
+  if model and model ~= '' then
     argv[#argv + 1] = '-m'
-    argv[#argv + 1] = opts.model
+    argv[#argv + 1] = model
   end
-  for key, value in pairs(opts.config or {}) do
+
+  local cfg = vim.tbl_extend('force', opts.config or {}, override.config or {})
+  for key, value in pairs(cfg) do
     argv[#argv + 1] = '-c'
     -- Values are parsed as TOML by ByteAsk; strings pass through as literals.
     argv[#argv + 1] = string.format('%s=%s', key, tostring(value))
@@ -106,6 +114,27 @@ function M.visual_selection()
   end
   local lines = vim.api.nvim_buf_get_text(0, srow - 1, scol - 1, erow - 1, ecol, {})
   return table.concat(lines, '\n')
+end
+
+--- Walk upward from `start_dir` looking for `filename`, stopping at the
+--- filesystem root. Used to locate the nearest AGENTS.md the way ByteAsk
+--- itself resolves it (deeper files take precedence over shallower ones).
+---@param start_dir string
+---@param filename string
+---@return string|nil absolute path if found
+function M.find_upward(start_dir, filename)
+  local dir = vim.fn.fnamemodify(start_dir, ':p:h')
+  while true do
+    local candidate = dir .. '/' .. filename
+    if vim.fn.filereadable(candidate) == 1 then
+      return candidate
+    end
+    local parent = vim.fn.fnamemodify(dir, ':h')
+    if parent == dir then
+      return nil -- reached the filesystem root
+    end
+    dir = parent
+  end
 end
 
 --- Buffer diagnostics rendered as a compact, model-friendly block.

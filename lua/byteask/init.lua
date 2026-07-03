@@ -26,8 +26,8 @@ end
 M.exec = function(prompt, ctx)
   commands.exec(prompt, ctx)
 end
-M.review = function()
-  commands.review()
+M.review = function(scope)
+  commands.review(scope)
 end
 M.apply = function()
   commands.apply()
@@ -40,6 +40,15 @@ M.resume = function(last)
 end
 M.fork = function(last)
   commands.fork(last)
+end
+M.agents = function()
+  commands.agents()
+end
+M.sessions = function()
+  commands.sessions()
+end
+M.model = function(clear)
+  commands.model(clear)
 end
 
 -- ── Statusline helper (lualine-friendly) ───────────────────────────────────
@@ -95,8 +104,8 @@ function M._register_commands()
   end, { nargs = '*', range = true, desc = 'Run byteask exec (headless); range = send selection as context' })
 
   cmd('ByteAskReview', function()
-    commands.review()
-  end, { desc = 'Run byteask review on the repository' })
+    commands.review() -- no scope: prompts (uncommitted / base branch / commit / whole repo)
+  end, { desc = 'Run byteask review, scoped via a prompt' })
   cmd('ByteAskApply', function()
     commands.apply()
   end, { desc = 'Apply the latest ByteAsk diff to the working tree' })
@@ -111,6 +120,18 @@ function M._register_commands()
   cmd('ByteAskFork', function(a)
     commands.fork(a.bang)
   end, { bang = true, desc = 'Fork a ByteAsk session (! = most recent)' })
+
+  cmd('ByteAskAgents', function()
+    commands.agents()
+  end, { desc = 'Open (or create) the nearest AGENTS.md to steer ByteAsk' })
+
+  cmd('ByteAskSessions', function()
+    commands.sessions()
+  end, { desc = 'Browse, archive, unarchive, or delete ByteAsk sessions' })
+
+  cmd('ByteAskModel', function(a)
+    commands.model(a.bang) -- :ByteAskModel! clears the override
+  end, { bang = true, desc = 'Set (or ! = clear) a model/-c override for future ByteAsk invocations' })
 end
 
 local function register_keymaps()

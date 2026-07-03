@@ -37,5 +37,5 @@ jobs:
         run: |
           nvim --headless --clean --cmd "set rtp+=$(pwd)" \
             -c "lua require('byteask').setup({})" \
-            -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
+            -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics','ByteAskAgents','ByteAskSessions','ByteAskModel'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
             -c "qa!"

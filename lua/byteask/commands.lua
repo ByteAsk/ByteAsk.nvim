@@ -153,10 +153,173 @@ function M.exec(prompt, extra_context)
   run_headless(argv, { title = 'exec', apply_after = config.options.auto_apply })
 end
 
---- `byteask review` against the current repository.
-function M.review()
-  local argv = util.build_subcommand({ 'review' })
+local function run_review(flags)
+  local argv = util.build_subcommand({ 'review' }, flags)
   run_headless(argv, { title = 'review' })
+end
+
+--- `byteask review`, scoped to match what the CLI actually supports
+--- (`--uncommitted` / `--base <branch>` / `--commit <sha>` / whole repo).
+--- With no scope, prompts via vim.ui.select.
+---@param scope string|nil one of 'uncommitted' | 'base' | 'commit' | 'repo'
+function M.review(scope)
+  if not scope then
+    vim.ui.select(
+      { 'Uncommitted changes', 'Against base branch', 'Specific commit', 'Whole repo' },
+      { prompt = 'ByteAsk review scope:' },
+      function(choice)
+        if not choice then
+          return
+        end
+        local scope_of = {
+          ['Uncommitted changes'] = 'uncommitted',
+          ['Against base branch'] = 'base',
+          ['Specific commit'] = 'commit',
+          ['Whole repo'] = 'repo',
+        }
+        M.review(scope_of[choice])
+      end
+    )
+    return
+  end
+
+  if scope == 'uncommitted' then
+    run_review({ '--uncommitted' })
+  elseif scope == 'base' then
+    vim.ui.input({ prompt = 'Base branch: ', default = 'main' }, function(branch)
+      if branch and branch ~= '' then
+        run_review({ '--base', branch })
+      end
+    end)
+  elseif scope == 'commit' then
+    vim.ui.input({ prompt = 'Commit SHA: ' }, function(sha)
+      if sha and sha ~= '' then
+        run_review({ '--commit', sha })
+      end
+    end)
+  else
+    run_review({})
+  end
+end
+
+--- Locate (or offer to create) the nearest AGENTS.md, walking up from the
+--- current buffer's directory. Pure editor action: no byteask process is
+--- involved, since AGENTS.md is picked up by the agent on its next turn.
+function M.agents()
+  local abs = vim.api.nvim_buf_get_name(0)
+  local start_dir = (abs and abs ~= '') and vim.fn.fnamemodify(abs, ':p:h') or vim.loop.cwd()
+  local found = util.find_upward(start_dir, 'AGENTS.md')
+  if found then
+    vim.cmd('edit ' .. vim.fn.fnameescape(found))
+    return
+  end
+
+  local target = vim.loop.cwd() .. '/AGENTS.md'
+  vim.ui.select({ 'Yes', 'No' }, {
+    prompt = 'No AGENTS.md found. Create one at ' .. vim.fn.fnamemodify(target, ':.') .. '?',
+  }, function(choice)
+    if choice ~= 'Yes' then
+      return
+    end
+    vim.fn.writefile({
+      '# AGENTS.md',
+      '',
+      '<!-- Instructions/tips for ByteAsk when working in this repo or directory. -->',
+      '<!-- Deeper AGENTS.md files override this one; direct user instructions override both. -->',
+      '',
+    }, target)
+    vim.cmd('edit ' .. vim.fn.fnameescape(target))
+  end)
+end
+
+--- Session lifecycle beyond resume/fork: browse all sessions (delegates to
+--- byteask's own picker), or archive/unarchive/delete by id or name.
+function M.sessions()
+  vim.ui.select(
+    { 'Browse all sessions', 'Archive a session', 'Unarchive a session', 'Delete a session' },
+    { prompt = 'ByteAsk sessions:' },
+    function(choice)
+      if not choice then
+        return
+      end
+      if choice == 'Browse all sessions' then
+        local argv = util.base_cmd()
+        argv[#argv + 1] = 'resume'
+        argv[#argv + 1] = '--all'
+        require('byteask.terminal').open_argv(argv)
+        return
+      end
+
+      local subcommand = ({
+        ['Archive a session'] = 'archive',
+        ['Unarchive a session'] = 'unarchive',
+        ['Delete a session'] = 'delete',
+      })[choice]
+
+      vim.ui.input({ prompt = 'Session id or name to ' .. subcommand .. ': ' }, function(id)
+        if not id or id == '' then
+          return
+        end
+        local argv = util.base_cmd()
+        argv[#argv + 1] = subcommand
+        argv[#argv + 1] = id
+        vim.fn.jobstart(argv, {
+          cwd = vim.loop.cwd(),
+          on_exit = function(_, code)
+            vim.schedule(function()
+              if code == 0 then
+                vim.notify('ByteAsk: ' .. subcommand .. 'd session ' .. id .. '.', vim.log.levels.INFO)
+              else
+                vim.notify('ByteAsk ' .. subcommand .. ' failed (code ' .. code .. ').', vim.log.levels.ERROR)
+              end
+            end)
+          end,
+        })
+      end)
+    end
+  )
+end
+
+--- Interactively set (or, with clear=true, reset) the model / -c overrides
+--- used by every subsequent invocation. Persists for the nvim session; falls
+--- back to config.lua defaults when left blank or cleared.
+---@param clear boolean|nil
+function M.model(clear)
+  if clear then
+    config.clear_override()
+    vim.notify('ByteAsk: cleared model/config overrides.', vim.log.levels.INFO)
+    return
+  end
+
+  local current_model = config.override.model or config.options.model or ''
+  vim.ui.input({
+    prompt = 'ByteAsk model (blank = default'
+      .. (current_model ~= '' and (', current: ' .. current_model) or '')
+      .. '): ',
+    default = current_model,
+  }, function(model)
+    if model == nil then
+      return -- cancelled
+    end
+    vim.ui.input({
+      prompt = 'ByteAsk -c overrides, comma-separated key=value (blank = none): ',
+    }, function(cfg_str)
+      if cfg_str == nil then
+        return -- cancelled
+      end
+      local cfg = {}
+      if cfg_str ~= '' then
+        for pair in cfg_str:gmatch('[^,]+') do
+          local key, value = pair:match('^%s*([%w_%.%-]+)%s*=%s*(.-)%s*$')
+          if key and value then
+            cfg[key] = value
+          end
+        end
+      end
+      config.set_override({ model = model ~= '' and model or nil, config = cfg })
+      vim.notify('ByteAsk: model/config override set (use :ByteAskModel! to clear).', vim.log.levels.INFO)
+    end)
+  end)
 end
 
 --- Ask ByteAsk to fix the current buffer's diagnostics via exec.
