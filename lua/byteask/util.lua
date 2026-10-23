@@ -103,6 +103,22 @@ function M.current_relpath()
   return vim.fn.fnamemodify(abs, ':.')
 end
 
+--- True when the last blockwise selection was made with `$`, i.e. it extended
+--- to the end of every line instead of stopping at a fixed column. `'>` stores
+--- the end column (not the intent), so the only way to tell `CTRL-V $` apart
+--- from a plain `CTRL-V` is to re-select with `gv` and inspect curswant.
+---@return boolean
+local function block_is_to_eol()
+  local view = vim.fn.winsaveview()
+  local ok = pcall(vim.cmd, 'normal! gv')
+  local to_eol = ok and vim.fn.getcurpos()[5] == vim.v.maxcol
+  if ok and vim.fn.mode():find('[vV\22]') then
+    pcall(vim.api.nvim_feedkeys, vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'x', false)
+  end
+  vim.fn.winrestview(view)
+  return to_eol
+end
+
 --- Text of the most recent visual selection (call from a command with range).
 --- Uses the '< and '> marks, so invoke after leaving visual mode.
 ---@return string
@@ -112,7 +128,23 @@ function M.visual_selection()
   if srow == 0 then
     return ''
   end
-  local lines = vim.api.nvim_buf_get_text(0, srow - 1, scol - 1, erow - 1, ecol, {})
+
+  -- Blockwise selections are rectangles, not continuous ranges: each line
+  -- contributes only its own columns. `$` widens every line to its own EOL.
+  if vim.fn.visualmode() == '\22' then
+    local c1 = math.min(scol, ecol)
+    local to_eol = block_is_to_eol()
+    local out = {}
+    for _, line in ipairs(vim.api.nvim_buf_get_lines(0, srow - 1, erow, false)) do
+      out[#out + 1] = to_eol and line:sub(c1) or line:sub(c1, math.max(scol, ecol))
+    end
+    return table.concat(out, '\n')
+  end
+
+  -- Linewise `'>` and a `$`-extended charwise selection both store MAXCOL here;
+  -- Neovim 0.9 rejects it, so clamp to the last line's length.
+  local last = vim.api.nvim_buf_get_lines(0, erow - 1, erow, false)[1] or ''
+  local lines = vim.api.nvim_buf_get_text(0, srow - 1, scol - 1, erow - 1, math.min(ecol, #last), {})
   return table.concat(lines, '\n')
 end
 

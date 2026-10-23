@@ -39,3 +39,18 @@ jobs:
             -c "lua require('byteask').setup({})" \
             -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics','ByteAskAgents','ByteAskSessions','ByteAskModel'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
             -c "qa!"
+
+  selection-test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        neovim: ['v0.9.5', 'stable']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.neovim }}
+      - name: Visual selection context
+        run: nvim --headless --clean -l tests/visual_selection.lua

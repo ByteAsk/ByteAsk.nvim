@@ -66,14 +66,16 @@ gh release view vX.Y.Z --repo ByteAsk/ByteAsk.nvim
 
 ### CI (runs on every push, not just tags)
 
-`.github/workflows/ci.yml` runs three jobs: `stylua --check .` (formatting),
-`luacheck lua/ plugin/ --globals vim` (lint), and a headless Neovim load-test
-that asserts all 11 `:ByteAsk*` commands register. Run these locally before
+`.github/workflows/ci.yml` runs four jobs: `stylua --check .` (formatting),
+`luacheck lua/ plugin/ --globals vim` (lint), a headless Neovim load-test
+that asserts all 11 `:ByteAsk*` commands register, and `tests/visual_selection.lua`
+(visual selection context) on Neovim 0.9.5 and stable. Run these locally before
 pushing to avoid a red CI:
 
 ```bash
 stylua .                                    # auto-fix formatting
 luacheck lua/ plugin/ --globals vim         # lint (brew install luarocks; luarocks install luacheck)
+nvim --headless --clean -l tests/visual_selection.lua   # selection context
 nvim --headless --clean --cmd "set rtp+=$(pwd)" \
   -c "lua require('byteask').setup({})" \
   -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics','ByteAskAgents','ByteAskSessions','ByteAskModel'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
