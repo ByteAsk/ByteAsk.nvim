@@ -29,8 +29,8 @@ end
 M.review = function(scope)
   commands.review(scope)
 end
-M.apply = function()
-  commands.apply()
+M.apply = function(task_id, on_done)
+  commands.apply(task_id, on_done)
 end
 M.fix_diagnostics = function()
   commands.fix_diagnostics()
@@ -106,9 +106,9 @@ function M._register_commands()
   cmd('ByteAskReview', function()
     commands.review() -- no scope: prompts (uncommitted / base branch / commit / whole repo)
   end, { desc = 'Run byteask review, scoped via a prompt' })
-  cmd('ByteAskApply', function()
-    commands.apply()
-  end, { desc = 'Apply the latest ByteAsk diff to the working tree' })
+  cmd('ByteAskApply', function(a)
+    commands.apply(a.args ~= '' and a.args or nil) -- no id: prompts for one
+  end, { nargs = '?', desc = 'Apply a ByteAsk task diff to the working tree' })
   cmd('ByteAskFixDiagnostics', function()
     commands.fix_diagnostics()
   end, { desc = 'Ask ByteAsk to fix the current buffer diagnostics' })

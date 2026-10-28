@@ -85,7 +85,7 @@ use {
 | `:ByteAskExec {instr}` | Headless `exec`. In visual mode, sends the selection as context |
 | `:ByteAskFixDiagnostics` | Send current-buffer LSP/compiler diagnostics to `exec` for a fix |
 | `:ByteAskReview` | Run `byteask review`, scoped via a prompt: uncommitted / base branch / commit / whole repo |
-| `:ByteAskApply` | Apply the latest agent diff to the working tree (`byteask apply`) |
+| `:ByteAskApply [task_id]` | Apply a task's diff to the working tree (`byteask apply`); prompts for the id when omitted |
 | `:ByteAskResume[!]` | Resume a session (picker; `!` = most recent) |
 | `:ByteAskFork[!]` | Fork a session (picker; `!` = most recent) |
 | `:ByteAskAgents` | Open the nearest `AGENTS.md` (walks up from the current file), or offer to create one |
@@ -118,7 +118,7 @@ require('byteask').setup({
   autoinstall_hint = true,    -- guide install when `byteask` is missing
   install_cmd = { 'pip', 'install', '--upgrade', 'byteask' },
 
-  auto_apply = false,         -- run `byteask apply` after a successful exec
+  auto_apply = false,         -- run `byteask apply` (prompts for the task id) after a successful exec
   notify_on_exit = true,      -- vim.notify when headless runs finish
 })
 ```

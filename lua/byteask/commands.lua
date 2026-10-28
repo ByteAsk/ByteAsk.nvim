@@ -10,6 +10,7 @@ local M = {}
 
 -- Reusable scratch output buffer for headless runs.
 local out = { buf = nil, job = nil }
+local last_task_id = nil
 
 local function ensure_out_buffer()
   if out.buf and vim.api.nvim_buf_is_valid(out.buf) then
@@ -57,20 +58,36 @@ local function clear_out()
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, {})
 end
 
---- Run `byteask apply` to apply the latest agent diff to the working tree.
---- No common flags: `apply` only performs a git-apply and rejects model/-c flags.
+--- Run `byteask apply <task_id>` to apply that task's diff to the working tree.
+--- The CLI requires the id (see `byteask apply --help`), so prompt for it when
+--- the caller has none. No model flag: `apply` accepts -c/--enable/--disable
+--- but not -m, which is why this builds off base_cmd().
+---@param task_id string|nil id of the task whose diff should be applied
 ---@param on_done fun(ok: boolean)|nil
-function M.apply(on_done)
+function M.apply(task_id, on_done)
+  if not task_id or task_id == '' then
+    vim.ui.input({
+      prompt = 'ByteAsk task id to apply: ',
+      default = last_task_id,
+    }, function(input)
+      if input and input ~= '' then
+        M.apply(vim.trim(input), on_done)
+      end
+    end)
+    return
+  end
+
   local argv = util.base_cmd()
   argv[#argv + 1] = 'apply'
-  vim.fn.jobstart(argv, {
+  argv[#argv + 1] = task_id
+  local job = vim.fn.jobstart(argv, {
     cwd = vim.loop.cwd(),
     on_exit = function(_, code)
       vim.schedule(function()
         local ok = code == 0
         if ok then
           vim.cmd('checktime') -- reload any buffers changed on disk
-          vim.notify('ByteAsk: applied latest diff to working tree.', vim.log.levels.INFO)
+          vim.notify('ByteAsk: applied the diff for task ' .. task_id .. '.', vim.log.levels.INFO)
         else
           vim.notify('ByteAsk apply failed (code ' .. tostring(code) .. ').', vim.log.levels.ERROR)
         end
@@ -80,6 +97,12 @@ function M.apply(on_done)
       end)
     end,
   })
+  if not job or job <= 0 then
+    vim.notify('ByteAsk: failed to start apply process (' .. tostring(job) .. ').', vim.log.levels.ERROR)
+    if on_done then
+      on_done(false)
+    end
+  end
 end
 
 --- Generic headless runner: streams stdout/stderr into the output buffer.
@@ -104,6 +127,10 @@ local function run_headless(argv, opts)
     for _, line in ipairs(data) do
       if line ~= '' then
         chunk[#chunk + 1] = line
+        local matched = line:match('session id:%s*([%w%-]+)') or line:match('task id:%s*([%w%-]+)')
+        if matched then
+          last_task_id = matched
+        end
       end
     end
     if #chunk > 0 then
@@ -113,7 +140,7 @@ local function run_headless(argv, opts)
     end
   end
 
-  out.job = vim.fn.jobstart(argv, {
+  local job = vim.fn.jobstart(argv, {
     cwd = vim.loop.cwd(),
     stdout_buffered = false,
     on_stdout = on_data,
@@ -123,13 +150,21 @@ local function run_headless(argv, opts)
       vim.schedule(function()
         append({ '', '[byteask ' .. (opts.title or 'run') .. ' exited: ' .. code .. ']' })
         if code == 0 and opts.apply_after then
-          M.apply()
+          M.apply(last_task_id)
         elseif config.options.notify_on_exit then
           vim.notify('ByteAsk ' .. (opts.title or 'run') .. ' finished (code ' .. code .. ').', vim.log.levels.INFO)
         end
       end)
     end,
   })
+
+  if not job or job <= 0 then
+    out.job = nil
+    vim.notify('ByteAsk: failed to start process (' .. tostring(job) .. ').', vim.log.levels.ERROR)
+    return
+  end
+
+  out.job = job
 
   if opts.stdin and opts.stdin ~= '' then
     vim.fn.chansend(out.job, opts.stdin)
