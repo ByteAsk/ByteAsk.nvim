@@ -42,7 +42,19 @@ local function append(lines)
   if type(lines) == 'string' then
     lines = vim.split(lines, '\n', { plain = true })
   end
-  vim.api.nvim_buf_set_lines(buf, -1, -1, false, lines)
+  local flat = {}
+  for _, item in ipairs(lines) do
+    if type(item) == 'string' and item:find('\n', 1, true) then
+      for _, sub in ipairs(vim.split(item, '\n', { plain = true })) do
+        flat[#flat + 1] = sub:gsub('\r$', '')
+      end
+    elseif type(item) == 'string' then
+      flat[#flat + 1] = item:gsub('\r$', '')
+    else
+      flat[#flat + 1] = item
+    end
+  end
+  vim.api.nvim_buf_set_lines(buf, -1, -1, false, flat)
   -- Keep the output window scrolled to the bottom.
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     if vim.api.nvim_win_get_buf(win) == buf then
@@ -113,7 +125,7 @@ local function run_headless(argv, opts)
     end
   end
 
-  out.job = vim.fn.jobstart(argv, {
+  local job = vim.fn.jobstart(argv, {
     cwd = vim.loop.cwd(),
     stdout_buffered = false,
     on_stdout = on_data,
@@ -130,6 +142,14 @@ local function run_headless(argv, opts)
       end)
     end,
   })
+
+  if not job or job <= 0 then
+    out.job = nil
+    vim.notify('ByteAsk: failed to start process (' .. tostring(job) .. ').', vim.log.levels.ERROR)
+    return
+  end
+
+  out.job = job
 
   if opts.stdin and opts.stdin ~= '' then
     vim.fn.chansend(out.job, opts.stdin)
@@ -197,8 +217,15 @@ function M.review(scope)
         run_review({ '--commit', sha })
       end
     end)
+  elseif scope == 'repo' then
+    -- `byteask review` has no "everything" flag: with neither a scope flag nor a
+    -- positional instruction it exits with "Specify --uncommitted, --base,
+    -- --commit, or provide custom review instructions".
+    run_review({ 'Review the entire repository.' })
+  elseif type(scope) == 'string' and vim.trim(scope) ~= '' then
+    run_review({ vim.trim(scope) })
   else
-    run_review({})
+    vim.notify('ByteAsk review: invalid review scope.', vim.log.levels.WARN)
   end
 end
 

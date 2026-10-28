@@ -39,3 +39,14 @@ jobs:
             -c "lua require('byteask').setup({})" \
             -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics','ByteAskAgents','ByteAskSessions','ByteAskModel'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
             -c "qa!"
+
+  review-scope-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: stable
+      - name: Review scopes match the CLI
+        run: nvim --headless --clean -l tests/review_scope.lua
