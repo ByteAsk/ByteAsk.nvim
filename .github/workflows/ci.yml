@@ -39,3 +39,5 @@ jobs:
             -c "lua require('byteask').setup({})" \
             -c "lua for _,n in ipairs({'ByteAsk','ByteAskToggle','ByteAskExec','ByteAskReview','ByteAskApply','ByteAskResume','ByteAskFork','ByteAskFixDiagnostics','ByteAskAgents','ByteAskSessions','ByteAskModel'}) do assert(vim.fn.exists(':'..n)==2, n..' not registered') end; print('ALL_COMMANDS_OK')" \
             -c "qa!"
+      - name: Exec context travels over stdin
+        run: nvim --headless --clean -l tests/exec_stdin.lua
